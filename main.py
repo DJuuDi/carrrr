@@ -24,9 +24,6 @@ clock = pygame.time.Clock()
 car_img = pygame.image.load('car.png')  # Використайте свій шлях до зображення автомобіля
 car_width = car_img.get_width()
 
-# Завантаження звуку
-crash_sound = pygame.mixer.Sound('crash.wav')  # Використайте свій шлях до звуку зіткнення
-
 # Функція відображення автомобіля
 def car(x, y):
     screen.blit(car_img, (x, y))
@@ -50,7 +47,6 @@ def message_display(text):
     pygame.time.wait(2000)
 
 def crash():
-    pygame.mixer.Sound.play(crash_sound)
     message_display('Ви врізалися!')
 
 # Основна гра
