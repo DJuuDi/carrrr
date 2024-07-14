@@ -1,128 +1,180 @@
-import pygame
-import random
+from random import choice, randint
+from pygame import *
+import sys
 
-# Ініціалізація Pygame
-pygame.init()
+init()
+font.init()
+font1 = font.SysFont("Impact", 100)
+font2 = font.SysFont("Impact", 50)
+game_over_text = font1.render("Гра закіньченна", True, (150, 0, 0))
 
-# Розміри вікна
-screen_width = 800
-screen_height = 600
+screen_info = display.Info()
+WIDTH, HEIGHT = screen_info.current_w, screen_info.current_h
+window = display.set_mode((WIDTH, HEIGHT), flags=FULLSCREEN)
+FPS = 90
+clock = time.Clock()
 
-# Налаштування екрану
-screen = pygame.display.set_mode((screen_width, screen_height))
-pygame.display.set_caption("2D Гонка")
+bg = image.load('road.jpg')
+bg = transform.scale(bg, (WIDTH, HEIGHT))
+bg_y1 = 0
+bg_y2 = -HEIGHT
 
-# Кольори
-black = (0, 0, 0)
-white = (255, 255, 255)
-red = (255, 0, 0)
+player_img = image.load("car.png")
+enemy_img = image.load("enemy.png")
+enemy_img2 = image.load("klipartz.com.png")
 
-# Годинник для контролю FPS
-clock = pygame.time.Clock()
+all_sprites = sprite.Group()
 
-# Завантаження зображень
-car_img = pygame.image.load('car.png')  # Використайте свій шлях до зображення автомобіля
-car_width = car_img.get_width()
+line_x = [120, 550, 1030]
 
-# Функція відображення автомобіля
-def car(x, y):
-    screen.blit(car_img, (x, y))
+class Sprite(sprite.Sprite):
+    def __init__(self, sprite_img, width, height, x, y):
+        super().__init__()
+        self.image = transform.scale(sprite_img, (width, height))
+        self.rect = self.image.get_rect()
+        self.rect.x = x
+        self.rect.y = y
+        self.mask = mask.from_surface(self.image)
+        all_sprites.add(self)
 
-# Функція відображення перешкод
-def obstacles(obst_list):
-    for obst in obst_list:
-        pygame.draw.rect(screen, black, [obst[0], obst[1], obst[2], obst[3]])
 
-# Функція відображення тексту
-def text_objects(text, font):
-    text_surface = font.render(text, True, black)
-    return text_surface, text_surface.get_rect()
+class Player(Sprite):
+    def __init__(self, sprite_img, width, height, x, y):
+        super().__init__(sprite_img, width, height, x, y)
+        self.hp = 100
+        self.score = 0
+        self.speed = 8
+        self.bg_speed = 2
+        self.max_speed = 30
 
-def message_display(text):
-    large_text = pygame.font.Font('freesansbold.ttf', 115)
-    text_surf, text_rect = text_objects(text, large_text)
-    text_rect.center = ((screen_width / 2), (screen_height / 2))
-    screen.blit(text_surf, text_rect)
-    pygame.display.update()
-    pygame.time.wait(2000)
+    def update(self):
+        key_pressed = key.get_pressed()
+        old_pos = self.rect.x, self.rect.y
+        if key_pressed[K_UP]:
+            if self.rect.y > 300:
+                self.rect.y -= self.speed
+            if self.bg_speed < self.max_speed:
+                self.bg_speed += 0.3
+        if key_pressed[K_DOWN] and self.rect.bottom < HEIGHT:
+            self.rect.y += self.speed
+            if self.bg_speed > 2:
+                self.bg_speed -= 0.2
 
-def crash():
-    message_display('Ви врізалися!')
+        if key_pressed[K_LEFT] and self.rect.x > 50:
+            self.rect.x -= self.speed
+        if key_pressed[K_RIGHT] and self.rect.right < WIDTH - 50:
+            self.rect.x += self.speed
 
-# Основна гра
-def game_loop():
-    x = (screen_width * 0.45)
-    y = (screen_height * 0.8)
-    x_change = 0
+        enemy_collide = sprite.spritecollide(
+            self, enemys, False, sprite.collide_mask)
+        if len(enemy_collide) > 0:
+            self.hp -= 100
 
-    obst_starty = -600
-    initial_speed = 7
-    obst_speed = initial_speed
-    obst_width = 100
-    obst_height = 100
-    num_of_obstacles = 5
 
-    obst_list = []
-    for i in range(num_of_obstacles):
-        obst_x = random.randrange(0, screen_width)
-        obst_y = obst_starty - i * (obst_height + 200)  # Розставляємо перешкоди з інтервалом
-        obst_list.append([obst_x, obst_y, obst_width, obst_height])
+class Enemy(Sprite):
+    def __init__(self, sprite_img, width, height):
+        rand_x = randint(0, 2)
+        super().__init__(sprite_img, width, height, line_x[rand_x], -200)
+        self.damage = 100
+        self.speed = 4
+        enemys.add(self)
 
-    score = 0
+    def update(self):
+        self.rect.y += player.bg_speed + 2
+        if self.rect.y > HEIGHT:
+            self.kill()
 
-    game_exit = False
+player = Player(player_img, 200, 300, 300, 300)
+enemys = sprite.Group()
 
-    while not game_exit:
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                game_exit = True
 
-            if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_LEFT:
-                    x_change = -5
-                elif event.key == pygame.K_RIGHT:
-                    x_change = 5
+score_text = font2.render(f"Score:{player.score}", True, (255, 255, 255))
 
-            if event.type == pygame.KEYUP:
-                if event.key == pygame.K_LEFT or event.key == pygame.K_RIGHT:
-                    x_change = 0
+start_time = time.get_ticks()
+enemy_spawn_time = time.get_ticks()
+enemy2_spawn_time = time.get_ticks()
+spawn_interval = randint(500, 3500)
+spawn2_interval = randint(500, 3500)
+run = True
+finish = False
 
-        x += x_change
+start_screen = True
+start_text = font2.render(f"НАЖМИ ЛЮБУ КНОПКУ", True, (255, 255, 255))
+restart_text = font2.render(f"НАЖМИ R щоб переграти", True, (255, 255, 255))
 
-        screen.fill(white)
 
-        for obst in obst_list:
-            obst[1] += obst_speed
-            if obst[1] > screen_height:
-                obst[1] = obst_starty
-                obst[0] = random.randrange(0, screen_width)
-                score += 1
-                obst_speed += 0.5  # Збільшуємо швидкість з кожною пройденою перешкодою
 
-        obstacles(obst_list)
-        car(x, y)
+while run:
+    for e in event.get():
+        if e.type == QUIT:
+            run = False
+        if e.type == KEYDOWN:
+            if start_screen:
+                start_screen = False
+            if e.key == K_ESCAPE:
+                run = False
+                sys.exit()
+            if finish and e.key == K_r:
+                finish = False
+                for s in all_sprites:
+                    s.kill()
+                player = Player(player_img,  200, 300, 300, 300)
+                score_text = font2.render(f"Score:{player.score}", True, (255, 255, 255))
 
-        if x > screen_width - car_width or x < 0:
-            crash()
-            obst_speed = initial_speed  # Скидання швидкості після зіткнення
-            score -= 5  # Втрата очок після зіткнення
 
-        for obst in obst_list:
-            if y < obst[1] + obst[3]:
-                if x > obst[0] and x < obst[0] + obst[2] or x + car_width > obst[0] and x + car_width < obst[0] + obst[2]:
-                    crash()
-                    obst_speed = initial_speed  # Скидання швидкості після зіткнення
-                    score -= 5  # Втрата очок після зіткнення
+    window.blit(bg, (0, bg_y1))
+    window.blit(bg, (0, bg_y2))
 
-        # Відображення очок
-        font = pygame.font.SysFont(None, 25)
-        text = font.render("Очки: " + str(score), True, black)
-        screen.blit(text, (0, 0))
+    if start_screen:
+        window.blit(start_text, (WIDTH/2 - start_text.get_width()/2,
+                                 HEIGHT/2 - start_text.get_height()/2))
+    else:
 
-        pygame.display.update()
-        clock.tick(60)
+        bg_y1 += player.bg_speed
+        bg_y2 += player.bg_speed
 
-    pygame.quit()
-    quit()
+        if bg_y1 > HEIGHT:
+            bg_y1 = -HEIGHT
+        if bg_y2 > HEIGHT:
+            bg_y2 = -HEIGHT
 
-game_loop()
+        if player.hp <= 0:
+            finish = True
+
+        now = time.get_ticks()  # отримуємо поточний час
+        if now - enemy_spawn_time > spawn_interval:  # якщо від появи останнього ворога пройшло більше 1с
+            rand_k = randint(1, 1)
+            for i in range(rand_k):
+                enemy1 = Enemy(enemy_img, 200, 150)  # створюємо нового ворога
+            enemy_spawn_time = time.get_ticks()  # оновлюємо час появи ворога
+            spawn_interval = randint(2000, 5000)
+
+        if now - enemy2_spawn_time > spawn2_interval:  
+            rand_k = randint(1, 3)
+            for i in range(rand_k):
+                enemy2 = Enemy(enemy_img2, 150, 200)  
+            enemy2_spawn_time = time.get_ticks()  
+            spawn2_interval = randint(3000, 8000)
+
+
+        collide_list = sprite.spritecollide(
+            player, enemys, True, sprite.collide_mask)
+        if len(collide_list) > 0:
+            finish = True
+
+        all_sprites.draw(window)
+        window.blit(score_text, (30, 30))
+
+        if not finish:
+            all_sprites.update()
+        if finish:
+            window.blit(game_over_text,
+                        (WIDTH/2 - game_over_text.get_width()/2,
+                         HEIGHT/2 - game_over_text.get_height()/2))
+
+            window.blit(restart_text,
+                        (WIDTH/2 - restart_text.get_width()/2,
+                        HEIGHT/2 - restart_text.get_height()/2 + 100))
+            
+    display.update()
+    clock.tick(FPS)
