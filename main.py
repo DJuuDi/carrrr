@@ -55,6 +55,7 @@ class Player(Sprite):
                 self.rect.y -= self.speed
             if self.bg_speed < self.max_speed:
                 self.bg_speed += 0.3
+
         if key_pressed[K_DOWN] and self.rect.bottom < HEIGHT:
             self.rect.y += self.speed
             if self.bg_speed > 2:
@@ -89,6 +90,8 @@ enemys = sprite.Group()
 
 
 score_text = font2.render(f"Score:{player.score}", True, (255, 255, 255))
+max_score = 0
+max_score_text = font2.render(f"Max Score:{max_score}", True, (255, 255, 255))
 
 start_time = time.get_ticks()
 enemy_spawn_time = time.get_ticks()
@@ -129,44 +132,49 @@ while run:
         window.blit(start_text, (WIDTH/2 - start_text.get_width()/2,
                                  HEIGHT/2 - start_text.get_height()/2))
     else:
+        if not finish:
+            bg_y1 += player.bg_speed
+            bg_y2 += player.bg_speed
 
-        bg_y1 += player.bg_speed
-        bg_y2 += player.bg_speed
+            if bg_y1 > HEIGHT:
+                bg_y1 = -HEIGHT
+            if bg_y2 > HEIGHT:
+                bg_y2 = -HEIGHT
+            player.score += 0.3
+            score_text = font2.render(f"Score:{int(player.score)}", True, (255, 255, 255))
 
-        if bg_y1 > HEIGHT:
-            bg_y1 = -HEIGHT
-        if bg_y2 > HEIGHT:
-            bg_y2 = -HEIGHT
+            if player.hp <= 0:
+                finish = True
 
-        if player.hp <= 0:
-            finish = True
+            now = time.get_ticks()  # отримуємо поточний час
+            if now - enemy_spawn_time > spawn_interval:  # якщо від появи останнього ворога пройшло більше 1с
+                rand_k = randint(1, 1)
+                for i in range(rand_k):
+                    enemy1 = Enemy(enemy_img, 200, 150)  # створюємо нового ворога
+                enemy_spawn_time = time.get_ticks()  # оновлюємо час появи ворога
+                spawn_interval = randint(2000, 5000)
 
-        now = time.get_ticks()  # отримуємо поточний час
-        if now - enemy_spawn_time > spawn_interval:  # якщо від появи останнього ворога пройшло більше 1с
-            rand_k = randint(1, 1)
-            for i in range(rand_k):
-                enemy1 = Enemy(enemy_img, 200, 150)  # створюємо нового ворога
-            enemy_spawn_time = time.get_ticks()  # оновлюємо час появи ворога
-            spawn_interval = randint(2000, 5000)
-
-        if now - enemy2_spawn_time > spawn2_interval:  
-            rand_k = randint(1, 3)
-            for i in range(rand_k):
-                enemy2 = Enemy(enemy_img2, 150, 200)  
-            enemy2_spawn_time = time.get_ticks()  
-            spawn2_interval = randint(3000, 8000)
+            if now - enemy2_spawn_time > spawn2_interval:  
+                rand_k = randint(1, 3)
+                for i in range(rand_k):
+                    enemy2 = Enemy(enemy_img2, 150, 200)  
+                enemy2_spawn_time = time.get_ticks()  
+                spawn2_interval = randint(3000, 8000)
 
 
-        collide_list = sprite.spritecollide(
-            player, enemys, True, sprite.collide_mask)
-        if len(collide_list) > 0:
-            finish = True
-
+            collide_list = sprite.spritecollide(
+                player, enemys, True, sprite.collide_mask)
+            if len(collide_list) > 0:
+                finish = True
+                if player.score > max_score:
+                    max_score = player.score
+            all_sprites.update()
+        
         all_sprites.draw(window)
         window.blit(score_text, (30, 30))
+        window.blit(max_score_text, (30, 100))
+        max_score_text = font2.render(f"Max Score:{int(max_score)}", True, (255, 255, 255))
 
-        if not finish:
-            all_sprites.update()
         if finish:
             window.blit(game_over_text,
                         (WIDTH/2 - game_over_text.get_width()/2,
