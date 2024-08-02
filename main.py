@@ -1,5 +1,6 @@
 from random import choice, randint
 from pygame import *
+import pygame_menu
 import sys
 
 init()
@@ -88,9 +89,20 @@ class Enemy(Sprite):
 player = Player(player_img, 200, 300, 300, 300)
 enemys = sprite.Group()
 
+def save_max_score(score):
+    with open("score.txt", "w") as file:
+        file.write(str(score))
+
+def read_max_score():
+    try:
+        with open("score.txt", "r") as file:
+            score = float(file.read())
+            return score
+    except:
+        return 0
 
 score_text = font2.render(f"Score:{player.score}", True, (255, 255, 255))
-max_score = 0
+max_score = read_max_score()
 max_score_text = font2.render(f"Max Score:{max_score}", True, (255, 255, 255))
 
 start_time = time.get_ticks()
@@ -98,6 +110,41 @@ enemy_spawn_time = time.get_ticks()
 enemy2_spawn_time = time.get_ticks()
 spawn_interval = randint(500, 3500)
 spawn2_interval = randint(500, 3500)
+
+
+
+def set_difficulty(selected, value):
+    """
+    Set the difficulty of the game.
+    """
+    print(f'Set difficulty to {selected[0]} ({value})')
+
+def start_the_game():
+    # Do the job here !
+    global run
+    run = True
+    menu.disable()
+
+#завантажуємо картинку
+myimage = pygame_menu.baseimage.BaseImage(
+    image_path='road.jpg',
+    drawing_mode=pygame_menu.baseimage.IMAGE_MODE_REPEAT_XY,
+)
+#створюємо власну тему - копію стандартної
+mytheme = pygame_menu.themes.THEME_DARK.copy()
+# колір верхньої панелі (останній параметр - 0 робить її прозорою)
+mytheme.title_background_color=(255, 255, 255, 0) 
+#задаємо картинку для фону
+mytheme.background_color = myimage
+menu = pygame_menu.Menu('a lOng rOad', WIDTH, HEIGHT,
+                       theme=mytheme)   
+
+user_name = menu.add.text_input("Ім'я :", default='Анонім')
+menu.add.selector('Складність :', [('Hard', 1), ('Easy', 2)], onchange=set_difficulty)
+menu.add.button('Грати', start_the_game)
+menu.add.button('Вийти', pygame_menu.events.EXIT)
+menu.mainloop(window)
+
 run = True
 finish = False
 
@@ -115,8 +162,8 @@ while run:
             if start_screen:
                 start_screen = False
             if e.key == K_ESCAPE:
-                run = False
-                sys.exit()
+                menu.enable()
+                menu.mainloop(window)
             if finish and e.key == K_r:
                 finish = False
                 for s in all_sprites:
@@ -168,6 +215,7 @@ while run:
                 finish = True
                 if player.score > max_score:
                     max_score = player.score
+                    save_max_score(max_score)
             all_sprites.update()
         
         all_sprites.draw(window)
