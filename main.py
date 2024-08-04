@@ -112,13 +112,6 @@ spawn_interval = randint(500, 3500)
 spawn2_interval = randint(500, 3500)
 
 
-
-def set_difficulty(selected, value):
-    """
-    Set the difficulty of the game.
-    """
-    print(f'Set difficulty to {selected[0]} ({value})')
-
 def start_the_game():
     # Do the job here !
     global run
@@ -140,7 +133,6 @@ menu = pygame_menu.Menu('a lOng rOad', WIDTH, HEIGHT,
                        theme=mytheme)   
 
 user_name = menu.add.text_input("Ім'я :", default='Анонім')
-menu.add.selector('Складність :', [('Hard', 1), ('Easy', 2)], onchange=set_difficulty)
 menu.add.button('Грати', start_the_game)
 menu.add.button('Вийти', pygame_menu.events.EXIT)
 menu.mainloop(window)
