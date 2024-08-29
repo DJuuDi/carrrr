@@ -5,9 +5,9 @@ import sys
 
 init()
 font.init()
-font1 = font.SysFont("Impact", 100)
-font2 = font.SysFont("Impact", 50)
-game_over_text = font1.render("Гра закіньченна", True, (150, 0, 0))
+font1 = font.SysFont("Impact", 300)
+font2 = font.SysFont("Impact", 90)
+game_over_text = font1.render("Гра закіньчена", True, (150, 0, 0))
 
 screen_info = display.Info()
 WIDTH, HEIGHT = screen_info.current_w, screen_info.current_h
